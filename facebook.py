@@ -43,6 +43,8 @@ import hmac
 import base64
 import logging
 import socket
+import cStringIO
+import gzip
 
 # Find a JSON parser
 try:
@@ -305,7 +307,7 @@ class GraphAPI(object):
         try:
             fileInfo = file.info()
             if fileInfo.maintype == 'text':
-                response = _parse_json(file.read())
+                response = _parse_json(GraphAPI._read(file))
             elif fileInfo.maintype == 'image':
                 mimetype = fileInfo['content-type']
                 response = {
@@ -389,6 +391,15 @@ class GraphAPI(object):
         else:
             response = json.loads(response)
             raise GraphAPIError(response)
+
+    @classmethod
+    def _read(cls, file):
+        if file.info().get('Content-Encoding') == 'gzip':
+            buf = cStringIO(file.read())
+            f = gzip.GzipFile(fileobj=buf)
+            return f.read()
+        else:
+            return file.read()
 
 
 class GraphAPIError(Exception):
